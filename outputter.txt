@@ -1,0 +1,70 @@
+#include <SPI.h>
+#include "printf.h"
+#include "RF24.h"
+
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+#define BME_SCK 5 //13
+#define BME_MISO 4 //+
+#define BME_MOSI 3 //+
+#define BME_CS 2 //10
+
+float nullAlt = 0;
+
+Adafruit_BME280 bme(BME_CS, BME_MOSI, BME_MISO, BME_SCK); // software SPI
+RF24 radio(7,8);
+
+unsigned long delayTime = 50;
+
+
+void setup() {
+    Serial.begin(115200);
+    
+    
+    radioInit();
+
+    delay(1000);
+
+    bmeInit();
+}
+
+
+void loop() {
+    float alt = bme.readAltitude(nullAlt);
+    Serial.println(alt);
+    radio.write(&alt, radio.getPayloadSize());
+    delay(delayTime);
+}
+
+void bmeInit() {
+  
+bme.begin(0x76);
+    delay(100);
+    for(int i=0; i<20; i++) {
+      nullAlt += (bme.readPressure() / 100);
+      delay(100);
+    }
+    nullAlt /= 20;
+    Serial.print("Nul alt is: ");
+    Serial.println(nullAlt);
+    
+}
+
+void radioInit() {
+
+  while(!radio.begin()) {
+      Serial.println("you dolbaeb");
+      delay(1000);
+      if(Serial.available()) {
+        if(Serial.read()=='s') {
+          break;
+        }
+      }
+    }
+    radio.setPayloadSize(sizeof(float));
+    radio.setPALevel(RF24_PA_LOW);
+    unsigned char address[6] = "Rad 1";
+    radio.openWritingPipe(address);
+  
+}
