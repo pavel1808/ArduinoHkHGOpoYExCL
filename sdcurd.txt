@@ -1,0 +1,66 @@
+#include <SPI.h>
+#include <string.h>
+#include <SD.h>
+
+static char *addr = "perm/";
+
+class global{
+  public:
+  
+  static void write(char n[], int a) {
+    if(!SD.exists("perm")) {
+      SD.mkdir("perm");
+    }
+    SD.remove(String(addr) + String(n));
+    File g = SD.open(String(addr) + String(n), FILE_WRITE);
+    if(!g) {Serial.println("openWriteError");return;}
+    g.write(a);
+    g.close();
+  }
+
+  static int read(char n[]) {
+    File g = SD.open(String(addr) + String(n));
+    if(!g) {Serial.println("openReadError");return;}
+    String b;
+    while(g.available()) {
+      b += g.read();
+    }
+    g.close();
+    return b.toInt();
+  }
+};
+
+
+void setup() {
+  Serial.begin(9600);
+
+  while(!Serial);
+  
+  if(!SD.begin(4)) {
+    Serial.println("error");
+    while(1);
+  }
+  
+  
+}
+
+String name;
+void loop() {
+  if(Serial.available()) {
+    name += char(Serial.read());
+  }else{
+    if(name != "") {
+      if(int i = (name.indexOf(' ') +1)) {
+        i--;
+        global::write(name.substring(0,i).c_str(),name.substring(i+1).toInt());
+        Serial.println("Written: " + name);
+      }else{
+        Serial.println("read: ");
+        Serial.println(global::read(name.c_str()));
+      }
+      name = "";
+    }
+  }
+
+  delay(100);
+}
