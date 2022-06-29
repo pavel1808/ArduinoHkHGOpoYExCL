@@ -1,0 +1,65 @@
+#include <Adafruit_SSD1306.h>
+#include <splash.h>
+
+#include <SPI.h>
+#include "printf.h"
+#include "RF24.h"
+
+Adafruit_SSD1306 display(4);
+RF24 radio(7, 8);
+
+int delaytime = 50;
+float altA[88];
+
+void setup() {
+    Serial.begin(115200);
+  
+    display.begin(0x3C);
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setTextSize(1);
+
+    for(int i=0;i<88;i++) altA[i] = 50;
+
+    while(!radio.begin()) {
+      Serial.println("you motherfucker");
+      delay(1000);
+    }
+
+    radio.setPayloadSize(sizeof(float));
+    radio.setPALevel(RF24_PA_LOW);
+    unsigned char address[6] = "Rad 1";
+    radio.openReadingPipe(1, address);
+    radio.startListening();
+}
+
+void loop() {
+    if(radio.available()) {
+
+      float alt;
+      radio.read(&alt, radio.getPayloadSize());
+      Serial.println(alt);
+      for(int i=0;i<87;i++) {
+        altA[i] = altA[i+1];
+      }
+      altA[87] = alt;
+    
+      drawFuck(alt);
+      
+    }
+}
+
+void drawFuck(float alt) {
+  display.clearDisplay();
+  display.setCursor(1,2);
+  display.println("alt:");
+  display.println();
+  display.print(alt);
+  
+  for(int i=0;i<32;i++) display.drawPixel(40, i, WHITE);
+  for(int i=40;i<50;i++) display.drawPixel(i, 20, WHITE);
+  for(int i=0;i<88;i++) display.drawPixel(40+i, 20 - altA[i]*10, WHITE);
+
+  display.display();
+}
